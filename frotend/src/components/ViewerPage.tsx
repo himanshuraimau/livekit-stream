@@ -17,18 +17,26 @@ const StreamView = () => {
 
   if (remoteParticipants.length === 0) {
     return (
-      <div className="stream-placeholder">
-        <div className="stream-waiting">
-          <h3>🔴 Waiting for stream to start...</h3>
-          <p>The host hasn't started streaming yet</p>
+      <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">🔴</span>
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">Waiting for stream to start...</h3>
+          <p className="text-gray-400">The host hasn't started streaming yet</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="stream-view">
+    <div className="w-full h-full bg-black relative">
       <VideoConference />
+      {/* Live indicator for viewers */}
+      <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full flex items-center space-x-2 text-sm font-semibold z-10">
+        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+        <span>LIVE</span>
+      </div>
     </div>
   )
 }
@@ -38,15 +46,19 @@ const ViewerControls = ({ onLeaveStream }: { onLeaveStream: () => void }) => {
   const remoteParticipants = useRemoteParticipants()
   
   return (
-    <div className="viewer-controls">
-      <div className="viewer-info">
-        <span className="participant-count">
+    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 opacity-0 hover:opacity-100 transition-opacity duration-300">
+      <div className="flex justify-between items-center">
+        <div className="bg-black/70 text-white px-4 py-2 rounded-full text-sm">
           👥 {remoteParticipants.length} streamer{remoteParticipants.length !== 1 ? 's' : ''} live
-        </span>
+        </div>
+        <button 
+          onClick={onLeaveStream}
+          className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-3 rounded-full font-semibold transition-colors flex items-center space-x-2"
+        >
+          <span>🚪</span>
+          <span>Leave Stream</span>
+        </button>
       </div>
-      <button className="control-btn leave-stream" onClick={onLeaveStream}>
-        🚪 Leave Stream
-      </button>
     </div>
   )
 }
@@ -224,64 +236,89 @@ const ViewerPage = () => {
 
   if (!roomId) {
     return (
-      <div className="error-page">
-        <h2>Stream Not Found</h2>
-        <p>Invalid stream link</p>
-        <button onClick={() => navigate('/')}>Go Home</button>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800 rounded-lg p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold text-red-400 mb-4">Stream Not Found</h2>
+          <p className="text-gray-300 mb-6">Invalid stream link</p>
+          <button 
+            onClick={() => navigate('/')}
+            className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors"
+          >
+            Go Home
+          </button>
+        </div>
       </div>
     )
   }
 
   if (showNameInput) {
     return (
-      <div className="viewer-page">
-        <div className="join-form-container">
-          <h2>Join Stream</h2>
-          <p>Enter your name to join the stream</p>
-          <form onSubmit={handleJoinStream} className="join-form">
-            <input
-              type="text"
-              placeholder="Your name"
-              value={participantName}
-              onChange={(e) => setParticipantName(e.target.value)}
-              maxLength={50}
-              required
-              className="name-input"
-            />
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800 rounded-2xl p-8 max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">👁️</span>
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Join Stream</h2>
+            <p className="text-gray-400">Enter your name to join the stream</p>
+          </div>
+          
+          <form onSubmit={handleJoinStream} className="space-y-6">
+            <div>
+              <input
+                type="text"
+                placeholder="Your name"
+                value={participantName}
+                onChange={(e) => setParticipantName(e.target.value)}
+                maxLength={50}
+                required
+                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
             <button 
               type="submit" 
               disabled={!participantName.trim() || isLoading || !isOnline}
-              className="join-btn"
-              onClick={() => console.log('🔘 Join button clicked, state:', { isLoading, isOnline, participantName: participantName.trim() })}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
             >
               {isLoading ? (
-                <span className="loading-text">
+                <>
                   <LoadingSpinner size="small" />
-                  Joining...
-                </span>
+                  <span>Joining...</span>
+                </>
               ) : !isOnline ? (
-                'Waiting for connection...'
+                <span>Waiting for connection...</span>
               ) : (
-                'Join Stream'
+                <>
+                  <span>👁️</span>
+                  <span>Join Stream</span>
+                </>
               )}
             </button>
           </form>
+          
           {error && (
-            <div className="error-message">
-              <p>{error}</p>
-              <div className="error-actions">
+            <div className="mt-6 bg-red-900/50 border border-red-700 rounded-lg p-4">
+              <p className="text-red-200 text-sm mb-3">{error}</p>
+              <div className="space-y-2">
                 {retryCount < 3 && participantName.trim() && (
                   <button 
                     onClick={() => fetchViewerToken(participantName.trim(), true)}
                     disabled={!isOnline || isLoading}
+                    className="w-full text-xs bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-2 rounded text-white transition-colors"
                   >
                     {isOnline ? 'Retry' : 'Waiting for connection...'}
                   </button>
                 )}
-                <button onClick={() => navigate('/')}>Go Home</button>
+                <button 
+                  onClick={() => navigate('/')}
+                  className="w-full text-xs bg-gray-600 hover:bg-gray-700 px-3 py-2 rounded text-white transition-colors"
+                >
+                  Go Home
+                </button>
               </div>
               {!isOnline && (
-                <p className="network-warning">
+                <p className="text-yellow-400 text-xs mt-2">
                   ⚠️ No internet connection detected
                 </p>
               )}
@@ -294,10 +331,10 @@ const ViewerPage = () => {
 
   if (isLoading) {
     return (
-      <div className="loading-page">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <LoadingSpinner size="large" message={`Connecting to ${roomId}...`} />
         {retryCount > 0 && (
-          <p className="retry-info">Retry attempt {retryCount}/3</p>
+          <p className="text-gray-400 text-sm mt-4">Retry attempt {retryCount}/3</p>
         )}
       </div>
     )
@@ -305,80 +342,105 @@ const ViewerPage = () => {
 
   if (error || !viewerToken || !serverUrl) {
     return (
-      <div className="error-page">
-        <h2>Stream Error</h2>
-        <p>{error || 'Failed to join stream'}</p>
-        <div className="error-actions">
-          {retryCount < 3 && participantName.trim() && (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800 rounded-lg p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold text-red-400 mb-4">Stream Error</h2>
+          <p className="text-gray-300 mb-6">{error || 'Failed to join stream'}</p>
+          <div className="space-y-3">
+            {retryCount < 3 && participantName.trim() && (
+              <button 
+                onClick={() => fetchViewerToken(participantName.trim(), true)}
+                disabled={!isOnline}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2 px-4 rounded-lg transition-colors"
+              >
+                {isOnline ? 'Retry Connection' : 'Waiting for connection...'}
+              </button>
+            )}
             <button 
-              onClick={() => fetchViewerToken(participantName.trim(), true)}
-              disabled={!isOnline}
+              onClick={() => setShowNameInput(true)}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors"
             >
-              {isOnline ? 'Retry Connection' : 'Waiting for connection...'}
+              Try Again
             </button>
+            <button 
+              onClick={() => navigate('/')}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors"
+            >
+              Go Home
+            </button>
+          </div>
+          {!isOnline && (
+            <p className="text-yellow-400 text-sm mt-4">
+              ⚠️ No internet connection detected
+            </p>
           )}
-          <button onClick={() => setShowNameInput(true)}>Try Again</button>
-          <button onClick={() => navigate('/')}>Go Home</button>
         </div>
-        {!isOnline && (
-          <p className="network-warning">
-            ⚠️ No internet connection detected
-          </p>
-        )}
       </div>
     )
   }
 
   return (
-    <div className="viewer-page">
-      <div className="stream-layout">
-        {/* Header */}
-        <div className="stream-header">
-          <div className="stream-title">
-            <h1>👁️ WATCHING</h1>
-            <div className="stream-badge">Viewer</div>
+    <div className="min-h-screen bg-gray-900 flex flex-col">
+      {/* Header */}
+      <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-xl">👁️</span>
+              <span className="text-xl font-bold text-white">WATCHING</span>
+            </div>
+            <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+              Viewer
+            </div>
           </div>
-          <div className="stream-info-header">
+          <div className="flex items-center space-x-6 text-sm text-gray-300">
             <span>Viewer: {participantName}</span>
             <span>Room: {roomId}</span>
-            <div className={`status-indicator ${
-              connectionState === ConnectionState.Connected ? 'connected' :
-              connectionState === ConnectionState.Connecting ? 'connecting' : 'disconnected'
+            <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${
+              connectionState === ConnectionState.Connected ? 'bg-green-900 text-green-300' :
+              connectionState === ConnectionState.Connecting ? 'bg-yellow-900 text-yellow-300' : 
+              'bg-red-900 text-red-300'
             }`}>
-              {connectionState === ConnectionState.Connected ? '🟢 Connected' :
-               connectionState === ConnectionState.Connecting ? '🟡 Connecting...' :
-               '🔴 Disconnected'}
+              <div className={`w-2 h-2 rounded-full ${
+                connectionState === ConnectionState.Connected ? 'bg-green-400' :
+                connectionState === ConnectionState.Connecting ? 'bg-yellow-400' : 
+                'bg-red-400'
+              }`}></div>
+              <span>
+                {connectionState === ConnectionState.Connected ? 'Connected' :
+                 connectionState === ConnectionState.Connecting ? 'Connecting...' :
+                 'Disconnected'}
+              </span>
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Main Content */}
-        <div className="main-content">
-          <LiveKitRoom
-            video={false}  // Viewers don't publish video
-            audio={false}  // Viewers don't publish audio
-            token={viewerToken}
-            serverUrl={serverUrl}
-            data-lk-theme="default"
-            onConnected={() => handleConnectionStateChange(ConnectionState.Connected)}
-            onDisconnected={() => handleConnectionStateChange(ConnectionState.Disconnected)}
-            onError={handleError}
-          >
-            <div className="video-section">
-              <div className="video-container">
-                <StreamView />
-                <RoomAudioRenderer />
-              </div>
-              <div className="stream-controls">
-                <ViewerControls onLeaveStream={handleLeaveStream} />
-              </div>
-            </div>
+      {/* Main Content */}
+      <div className="flex-1 flex">
+        <LiveKitRoom
+          video={false}  // Viewers don't publish video
+          audio={false}  // Viewers don't publish audio
+          token={viewerToken}
+          serverUrl={serverUrl}
+          data-lk-theme="default"
+          onConnected={() => handleConnectionStateChange(ConnectionState.Connected)}
+          onDisconnected={() => handleConnectionStateChange(ConnectionState.Disconnected)}
+          onError={handleError}
+          className="flex-1 flex"
+        >
+          {/* Video Section */}
+          <div className="flex-1 relative bg-black">
+            <StreamView />
+            <RoomAudioRenderer />
+            <ViewerControls onLeaveStream={handleLeaveStream} />
+          </div>
 
-            <div className="chat-sidebar">
-              <ChatComponent />
-            </div>
-          </LiveKitRoom>
-        </div>
+          {/* Chat Sidebar */}
+          <div className="w-80 bg-gray-800 border-l border-gray-700">
+            <ChatComponent />
+          </div>
+        </LiveKitRoom>
       </div>
     </div>
   )

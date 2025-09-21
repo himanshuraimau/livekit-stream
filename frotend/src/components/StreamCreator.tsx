@@ -100,10 +100,12 @@ const StreamCreator = ({ onStreamCreated }: StreamCreatorProps) => {
   }
 
   return (
-    <div className="stream-creator">
-      <form onSubmit={handleSubmit} className="create-stream-form">
-        <div className="form-group">
-          <label htmlFor="hostName">Your Name:</label>
+    <div className="w-full">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label htmlFor="hostName" className="block text-sm font-medium text-gray-300 mb-2">
+            Your Name
+          </label>
           <input
             id="hostName"
             type="text"
@@ -112,24 +114,24 @@ const StreamCreator = ({ onStreamCreated }: StreamCreatorProps) => {
             placeholder="Enter your name"
             maxLength={50}
             disabled={isCreating}
-            className="host-name-input"
+            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           />
         </div>
 
         {error && (
-          <div className="error-message">
-            <p>{error}</p>
+          <div className="bg-red-900/50 border border-red-700 rounded-lg p-4">
+            <p className="text-red-200 text-sm mb-2">{error}</p>
             {retryCount < 3 && hostName.trim() && (
               <button 
                 onClick={() => handleCreateStream(true)}
                 disabled={isCreating || !isOnline}
-                className="retry-btn"
+                className="text-xs bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded text-white transition-colors"
               >
                 {isOnline ? 'Retry' : 'Waiting for connection...'}
               </button>
             )}
             {!isOnline && (
-              <p className="network-warning">
+              <p className="text-yellow-400 text-xs mt-2">
                 ⚠️ No internet connection detected
               </p>
             )}
@@ -138,18 +140,21 @@ const StreamCreator = ({ onStreamCreated }: StreamCreatorProps) => {
 
         <button 
           type="submit"
-          className="create-stream-btn"
           disabled={isCreating || !hostName.trim() || !isOnline}
+          className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center space-x-2"
         >
           {isCreating ? (
-            <span className="loading-text">
+            <>
               <LoadingSpinner size="small" />
-              Creating Stream...
-            </span>
+              <span>Creating Stream...</span>
+            </>
           ) : !isOnline ? (
-            'Waiting for connection...'
+            <span>Waiting for connection...</span>
           ) : (
-            'Create Stream'
+            <>
+              <span className="text-lg">🔴</span>
+              <span>Go Live</span>
+            </>
           )}
         </button>
       </form>

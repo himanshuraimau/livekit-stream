@@ -4,13 +4,12 @@ import HostPage from './components/HostPage'
 import ViewerPage from './components/ViewerPage'
 import ErrorBoundary from './components/ErrorBoundary'
 import NetworkStatusIndicator from './components/NetworkStatusIndicator'
-import './App.css'
 
 function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <div className="app">
+        <div className="min-h-screen bg-gray-900 text-white">
           <NetworkStatusIndicator />
           <Routes>
             <Route path="/" element={<HomePage />} />

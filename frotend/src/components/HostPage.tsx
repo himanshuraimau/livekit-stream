@@ -24,24 +24,20 @@ interface RoomData {
 
 // Host stream view component that shows the host's video prominently
 const HostStreamView = () => {
-  const { localParticipant } = useLocalParticipant()
   const remoteParticipants = useRemoteParticipants()
 
   return (
-    <div className="host-stream-view">
-      {/* Main host video */}
-      <div className="host-video-main">
-        <VideoConference />
-        
-        {/* Stream info overlay */}
-        <div className="stream-info-overlay">
-          <div className="live-indicator">
-            <span className="live-dot">🔴</span>
-            <span>LIVE</span>
-          </div>
-          <div className="viewer-count">
-            👥 {remoteParticipants.length} viewer{remoteParticipants.length !== 1 ? 's' : ''}
-          </div>
+    <div className="relative w-full h-full bg-black">
+      <VideoConference />
+      
+      {/* Stream info overlay */}
+      <div className="absolute top-4 left-4 flex space-x-3 z-10">
+        <div className="bg-red-600 text-white px-3 py-1 rounded-full flex items-center space-x-2 text-sm font-semibold">
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          <span>LIVE</span>
+        </div>
+        <div className="bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+          👥 {remoteParticipants.length} viewer{remoteParticipants.length !== 1 ? 's' : ''}
         </div>
       </div>
     </div>
@@ -71,28 +67,44 @@ const HostControls = ({ onEndStream, roomId }: { onEndStream: () => void; roomId
   }
 
   return (
-    <div className="host-controls">
-      <div className="basic-controls">
-        <button
-          className={`control-btn ${isMicMuted ? 'muted' : ''}`}
-          onClick={toggleMicrophone}
-          title={isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
-        >
-          {isMicMuted ? '🎤' : '🎤'}
-        </button>
-        <button
-          className={`control-btn ${isCameraOff ? 'off' : ''}`}
-          onClick={toggleCamera}
-          title={isCameraOff ? 'Turn camera on' : 'Turn camera off'}
-        >
-          {isCameraOff ? '📹' : '📹'}
-        </button>
-        <RecordButton roomId={roomId} />
-      </div>
+    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 opacity-0 hover:opacity-100 transition-opacity duration-300">
+      <div className="flex justify-between items-center">
+        <div className="flex space-x-3">
+          <button
+            onClick={toggleMicrophone}
+            className={`p-3 rounded-full transition-colors ${
+              isMicMuted 
+                ? 'bg-red-600 hover:bg-red-700' 
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+            title={isMicMuted ? 'Unmute microphone' : 'Mute microphone'}
+          >
+            <span className="text-white text-lg">
+              {isMicMuted ? '🎤' : '🎤'}
+            </span>
+          </button>
+          <button
+            onClick={toggleCamera}
+            className={`p-3 rounded-full transition-colors ${
+              isCameraOff 
+                ? 'bg-red-600 hover:bg-red-700' 
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
+            title={isCameraOff ? 'Turn camera on' : 'Turn camera off'}
+          >
+            <span className="text-white text-lg">
+              {isCameraOff ? '📹' : '📹'}
+            </span>
+          </button>
+          <RecordButton roomId={roomId} />
+        </div>
 
-      <div className="end-controls">
-        <button className="control-btn end-stream" onClick={onEndStream}>
-          🛑 End Stream
+        <button 
+          onClick={onEndStream}
+          className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-semibold transition-colors flex items-center space-x-2"
+        >
+          <span>🛑</span>
+          <span>End Stream</span>
         </button>
       </div>
     </div>
@@ -110,6 +122,7 @@ const HostPage = () => {
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.Disconnected)
   const [permissionError, setPermissionError] = useState('')
   const [retryCount, setRetryCount] = useState(0)
+  const [copySuccess, setCopySuccess] = useState(false)
   const { isOnline } = useNetworkStatus()
 
   useEffect(() => {
@@ -252,7 +265,8 @@ const HostPage = () => {
   const copyShareUrl = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl)
-      alert('Stream link copied to clipboard!')
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
     } catch (error) {
       console.error('Failed to copy to clipboard:', error)
       // Fallback for older browsers
@@ -262,16 +276,17 @@ const HostPage = () => {
       textArea.select()
       document.execCommand('copy')
       document.body.removeChild(textArea)
-      alert('Stream link copied to clipboard!')
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
     }
   }
 
   if (isLoading) {
     return (
-      <div className="loading-page">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <LoadingSpinner size="large" message="Setting up your stream room..." />
         {retryCount > 0 && (
-          <p className="retry-info">Retry attempt {retryCount}/3</p>
+          <p className="text-gray-400 text-sm mt-4">Retry attempt {retryCount}/3</p>
         )}
       </div>
     )
@@ -279,118 +294,162 @@ const HostPage = () => {
 
   if (error || !roomId) {
     return (
-      <div className="error-page">
-        <h2>Stream Error</h2>
-        <p>{error || 'No room ID provided'}</p>
-        <div className="error-actions">
-          {roomId && retryCount < 3 && (
-            <button
-              onClick={() => {
-                setError('')
-                setIsLoading(true)
-                fetchRoomInfo(roomId, true)
-              }}
-              disabled={!isOnline}
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800 rounded-lg p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold text-red-400 mb-4">Stream Error</h2>
+          <p className="text-gray-300 mb-6">{error || 'No room ID provided'}</p>
+          <div className="space-y-3">
+            {roomId && retryCount < 3 && (
+              <button
+                onClick={() => {
+                  setError('')
+                  setIsLoading(true)
+                  fetchRoomInfo(roomId, true)
+                }}
+                disabled={!isOnline}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2 px-4 rounded-lg transition-colors"
+              >
+                {isOnline ? 'Retry' : 'Waiting for connection...'}
+              </button>
+            )}
+            <button 
+              onClick={() => navigate('/')}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors"
             >
-              {isOnline ? 'Retry' : 'Waiting for connection...'}
+              Go Home
             </button>
+          </div>
+          {!isOnline && (
+            <p className="text-yellow-400 text-sm mt-4">
+              ⚠️ No internet connection detected
+            </p>
           )}
-          <button onClick={() => navigate('/')}>Go Home</button>
         </div>
-        {!isOnline && (
-          <p className="network-warning">
-            ⚠️ No internet connection detected
-          </p>
-        )}
       </div>
     )
   }
 
   if (permissionError) {
     return (
-      <div className="error-page">
-        <h2>Permissions Required</h2>
-        <p>{permissionError}</p>
-        <button onClick={requestPermissions}>Grant Permissions</button>
-        <button onClick={() => navigate('/')}>Go Home</button>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800 rounded-lg p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold text-yellow-400 mb-4">Permissions Required</h2>
+          <p className="text-gray-300 mb-6">{permissionError}</p>
+          <div className="space-y-3">
+            <button 
+              onClick={requestPermissions}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors"
+            >
+              Grant Permissions
+            </button>
+            <button 
+              onClick={() => navigate('/')}
+              className="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg transition-colors"
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!roomData || !roomData.hostToken || !roomData.serverUrl) {
     return (
-      <div className="loading-page">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <LoadingSpinner size="large" message="Getting your host credentials..." />
       </div>
     )
   }
 
   return (
-    <div className="host-page">
-      <div className="stream-layout">
-        {/* Header */}
-        <div className="stream-header">
-          <div className="stream-title">
-            <h1>🔴 LIVE</h1>
-            <div className="stream-badge">Host</div>
+    <div className="min-h-screen bg-gray-900 flex flex-col">
+      {/* Header */}
+      <header className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+              <span className="text-xl font-bold text-white">LIVE</span>
+            </div>
+            <div className="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+              Host
+            </div>
           </div>
-          <div className="stream-info-header">
+          <div className="flex items-center space-x-6 text-sm text-gray-300">
             <span>Host: {roomData.hostName}</span>
             <span>Room: {roomId}</span>
-            <div className={`status-indicator ${connectionState === ConnectionState.Connected ? 'connected' :
-              connectionState === ConnectionState.Connecting ? 'connecting' : 'disconnected'
-              }`}>
-              {connectionState === ConnectionState.Connected ? '🟢 Connected' :
-                connectionState === ConnectionState.Connecting ? '🟡 Connecting...' :
-                  '🔴 Disconnected'}
+            <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${
+              connectionState === ConnectionState.Connected ? 'bg-green-900 text-green-300' :
+              connectionState === ConnectionState.Connecting ? 'bg-yellow-900 text-yellow-300' : 
+              'bg-red-900 text-red-300'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${
+                connectionState === ConnectionState.Connected ? 'bg-green-400' :
+                connectionState === ConnectionState.Connecting ? 'bg-yellow-400' : 
+                'bg-red-400'
+              }`}></div>
+              <span>
+                {connectionState === ConnectionState.Connected ? 'Connected' :
+                 connectionState === ConnectionState.Connecting ? 'Connecting...' :
+                 'Disconnected'}
+              </span>
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Share Controls */}
-        <div className="share-controls">
-          <h3>📤 Share Your Stream</h3>
-          <div className="share-url-container">
+      {/* Share Controls */}
+      <div className="bg-gray-800 border-b border-gray-700 px-6 py-4">
+        <div className="flex items-center space-x-4">
+          <span className="text-gray-300 font-medium">Share your stream:</span>
+          <div className="flex-1 flex space-x-3">
             <input
               type="text"
               value={shareUrl}
               readOnly
-              className="share-url-input"
+              className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white text-sm font-mono"
               placeholder="Stream URL will appear here..."
             />
-            <button onClick={copyShareUrl} className="copy-btn">
-              📋 Copy Link
+            <button 
+              onClick={copyShareUrl}
+              className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+                copySuccess 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+            >
+              {copySuccess ? '✓ Copied!' : '📋 Copy Link'}
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="main-content">
-          <LiveKitRoom
-            video={true}
-            audio={true}
-            token={roomData.hostToken}
-            serverUrl={roomData.serverUrl}
-            data-lk-theme="default"
-            onConnected={() => handleConnectionStateChange(ConnectionState.Connected)}
-            onDisconnected={() => handleConnectionStateChange(ConnectionState.Disconnected)}
-            onError={handleError}
-          >
-            <div className="video-section">
-              <div className="video-container">
-                <HostStreamView />
-                <RoomAudioRenderer />
-              </div>
-              <div className="stream-controls">
-                <HostControls onEndStream={handleEndStream} roomId={roomId} />
-              </div>
-            </div>
+      {/* Main Content */}
+      <div className="flex-1 flex">
+        <LiveKitRoom
+          video={true}
+          audio={true}
+          token={roomData.hostToken}
+          serverUrl={roomData.serverUrl}
+          data-lk-theme="default"
+          onConnected={() => handleConnectionStateChange(ConnectionState.Connected)}
+          onDisconnected={() => handleConnectionStateChange(ConnectionState.Disconnected)}
+          onError={handleError}
+          className="flex-1 flex"
+        >
+          {/* Video Section */}
+          <div className="flex-1 relative bg-black">
+            <HostStreamView />
+            <RoomAudioRenderer />
+            <HostControls onEndStream={handleEndStream} roomId={roomId} />
+          </div>
 
-            <div className="chat-sidebar">
-              <ChatComponent />
-            </div>
-          </LiveKitRoom>
-        </div>
+          {/* Chat Sidebar */}
+          <div className="w-80 bg-gray-800 border-l border-gray-700">
+            <ChatComponent />
+          </div>
+        </LiveKitRoom>
       </div>
     </div>
   )
