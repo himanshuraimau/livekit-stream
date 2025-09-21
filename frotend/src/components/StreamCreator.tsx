@@ -1,0 +1,160 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import LoadingSpinner from './LoadingSpinner'
+import { useNetworkStatus } from '../hooks/useNetworkStatus'
+
+interface CreateRoomResponse {
+  roomId: string
+  hostToken: string
+  shareUrl: string
+  serverUrl: string
+  hostName: string
+  createdAt: string
+}
+
+interface StreamCreatorProps {
+  onStreamCreated?: (roomData: CreateRoomResponse) => void
+}
+
+const StreamCreator = ({ onStreamCreated }: StreamCreatorProps) => {
+  const [hostName, setHostName] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
+  const navigate = useNavigate()
+  const { isOnline } = useNetworkStatus()
+
+  const handleCreateStream = async (isRetry = false) => {
+    if (!hostName.trim()) {
+      setError('Please enter your name')
+      return
+    }
+
+    if (!isOnline) {
+      setError('No internet connection. Please check your network and try again.')
+      return
+    }
+
+    setIsCreating(true)
+    setError('')
+
+    if (isRetry) {
+      setRetryCount(prev => prev + 1)
+    }
+
+    try {
+      console.log('Creating stream for host:', hostName.trim());
+      const response = await fetch('http://localhost:3001/api/rooms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          hostName: hostName.trim()
+        }),
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      })
+
+      console.log('Stream creation response:', response.status, response.ok);
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create stream')
+      }
+
+      const roomData: CreateRoomResponse = await response.json()
+      console.log('Room data received:', roomData);
+      
+      // Call the callback if provided
+      if (onStreamCreated) {
+        onStreamCreated(roomData)
+      }
+
+      // Navigate to host page with room data
+      navigate(`/host/${roomData.roomId}`, { 
+        state: { 
+          roomData,
+          hostToken: roomData.hostToken,
+          shareUrl: roomData.shareUrl,
+          serverUrl: roomData.serverUrl
+        } 
+      })
+
+      setRetryCount(0) // Reset retry count on success
+
+    } catch (error) {
+      console.error('Error creating stream:', error)
+      if (error instanceof Error && error.name === 'AbortError') {
+        setError('Request timed out. Please check your connection and try again.')
+      } else {
+        setError(error instanceof Error ? error.message : 'Failed to create stream')
+      }
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    handleCreateStream()
+  }
+
+  return (
+    <div className="stream-creator">
+      <form onSubmit={handleSubmit} className="create-stream-form">
+        <div className="form-group">
+          <label htmlFor="hostName">Your Name:</label>
+          <input
+            id="hostName"
+            type="text"
+            value={hostName}
+            onChange={(e) => setHostName(e.target.value)}
+            placeholder="Enter your name"
+            maxLength={50}
+            disabled={isCreating}
+            className="host-name-input"
+          />
+        </div>
+
+        {error && (
+          <div className="error-message">
+            <p>{error}</p>
+            {retryCount < 3 && hostName.trim() && (
+              <button 
+                onClick={() => handleCreateStream(true)}
+                disabled={isCreating || !isOnline}
+                className="retry-btn"
+              >
+                {isOnline ? 'Retry' : 'Waiting for connection...'}
+              </button>
+            )}
+            {!isOnline && (
+              <p className="network-warning">
+                ⚠️ No internet connection detected
+              </p>
+            )}
+          </div>
+        )}
+
+        <button 
+          type="submit"
+          className="create-stream-btn"
+          disabled={isCreating || !hostName.trim() || !isOnline}
+        >
+          {isCreating ? (
+            <span className="loading-text">
+              <LoadingSpinner size="small" />
+              Creating Stream...
+            </span>
+          ) : !isOnline ? (
+            'Waiting for connection...'
+          ) : (
+            'Create Stream'
+          )}
+        </button>
+      </form>
+    </div>
+  )
+}
+
+export default StreamCreator
